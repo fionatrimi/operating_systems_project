@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <unistd.h>
  
 #define N 10
 pthread_mutex_t lock;
@@ -38,7 +39,7 @@ void * order(void *x){
 
   while (cooks==0){
     printf("H paraggelia %d den brike paraskevasth. Blocked...\n", id);
-    rc= pthread_cond_wait(&cond, &block);
+    rc= pthread_cond_wait(&cond, &lock);
   }
 
   printf("H paraggelia %d eksipiretitai.\n", id);
