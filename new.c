@@ -2,41 +2,52 @@
 #include <stdlib.h>
 #include <pthread.h>
  
-#define NUM_THREADS 2
- 
-/* create thread argument struct for thr_func() */
-typedef struct _thread_data_t {
-  int tid;
-  double stuff;
-} thread_data_t;
- 
-/* thread function */
-void *thr_func(void *arg) {
-  thread_data_t *data = (thread_data_t *)arg;
- 
-  printf("hello from thr_func, thread id: %d\n", data->tid);
- 
-  pthread_exit(NULL);
+#define N 10
+pthread_mutex_t lock;
+pthread_cond_t cond;
+int cooks=2;
+int id[N];
+
+int main(){
+  int rc;
+  pthread_t threads[N];
+  pthread_mutex_init(&lock, NULL);
+  pthread_cond_init(&cond, NULL);
+
+  for(int i=0; i<N; i++){
+    id[i] = i+1;
+    printf("Main: creating thread %d\n", i+1);
+    rc = pthread_create(&threads[i], NULL, order, &id[i]);
+  }
+
+  for (int i=0; i<N; i++){
+    pthread_join(threads[i], NULL);
+  }
+
+  pthread_mutex_destroy(&lock);
+  pthread_cond_destroy(&cond);
+  return 0;
 }
- 
-int main(int argc, char **argv) {
-  pthread_t thr[NUM_THREADS];
-  int i, rc;
-  /* create a thread_data_t argument array */
-  thread_data_t thr_data[NUM_THREADS];
- 
-  /* create threads */
-  for (i = 0; i < NUM_THREADS; ++i) {
-    thr_data[i].tid = i;
-    if ((rc = pthread_create(&thr[i], NULL, thr_func, &thr_data[i]))) {
-      fprintf(stderr, "error: pthread_create, rc: %d\n", rc);
-      return EXIT_FAILURE;
-    }
+
+void * order(void *x){
+  int id = *(int*)x;
+  int rc;
+  printf("Hello from order: %d\n", id);
+  rc = pthread_mutex_lock(&lock);
+
+  while (cooks==0){
+    printf("H paraggelia %d den brike paraskevasth. Blocked...\n", id);
+    rc= pthread_cond_wait(&cond, &block);
   }
-  /* block until all threads complete */
-  for (i = 0; i < NUM_THREADS; ++i) {
-    pthread_join(thr[i], NULL);
-  }
- 
-  return EXIT_SUCCESS;
+
+  printf("H paraggelia %d eksipiretitai.\n", id);
+  cooks--;
+  rc = pthread_mutex_unlock(&lock);
+  sleep(5);
+  rc=pthread_mutex_lock(&lock);
+  printf("H paraggelia %d eksipiretithike epitixos! \n", id);
+  cooks++;
+  rc = pthread_cond_signal(&cond);
+  rc = pthread_mutex_unlock(&lock);
+  pthread_exit(NULL);
 }
