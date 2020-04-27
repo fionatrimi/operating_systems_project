@@ -7,6 +7,7 @@ pthread_mutex_t lock;
 pthread_cond_t cond;
 int cooks=2;
 int id[N];
+void * order(void *x);
 
 int main(){
   int rc;
