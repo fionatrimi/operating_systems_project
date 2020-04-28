@@ -77,11 +77,11 @@ void * order(void *x){
 
   printf("Order %d is executing\n", id);
   n_cook--;
-  sleep(1);//sleep(t_prep);
   n_oven--;
-  //sleep(1);//sleep(t_bake);
   pthread_mutex_unlock(&lock);
   
+  sleep(1);//sleep(t_prep);
+  sleep(1);//sleep(t_bake);
 
   pthread_mutex_lock(&lock);
   printf("Successfull execution of order %d\n", id);
