@@ -34,8 +34,8 @@ pthread_mutex_t mutex_print = PTHREAD_MUTEX_INITIALIZER;
 
 
 //Conditions
-pthread_cond_t codd_no_available_cook = PTHREAD_COND_INITIALIZER;
-pthread_cond_t cond_no_available_oven = PTHREAD_COND_INITIALIZER;
+pthread_cond_t cond_available_cook = PTHREAD_COND_INITIALIZER;
+pthread_cond_t cond_available_oven = PTHREAD_COND_INITIALIZER;
 
 
 
@@ -58,7 +58,8 @@ int main(int argc, char * argv[]){
     return -1;
   }
   printf("Number of customers: %d\nSeed: %d\n",n_cust, seed);
-
+  available_cooks = n_cook;
+  available_ovens = n_oven;
 
   /*
     * Creting n_cust pthreads giving each one of them an id
@@ -69,7 +70,7 @@ int main(int argc, char * argv[]){
   for (int i=0; i<n_cust; i++){
     id[i] = i+1;
     printf("Main: (creating thread) incoming order with id: %d\n", i+1);
-    pthread_create(&threads[i], NULL, order, &id[i]);
+    pthread_create(&threads[i], NULL, &order, &id[i]);
   }
 
 
@@ -80,14 +81,19 @@ int main(int argc, char * argv[]){
     pthread_join(threads[i], NULL);
   }
 
-  pthread_mutex_destroy(&lock);
-  pthread_cond_destroy(&cond);
+  pthread_mutex_destroy(&mutex_available_cook);
+  pthread_mutex_destroy(&mutex_available_oven);
+  pthread_mutex_destroy(&mutex_max_time);
+  pthread_mutex_destroy(&mutex_avg_time);
+  pthread_mutex_destroy(&mutex_print);
+  pthread_cond_destroy(&cond_available_cook);
+  pthread_cond_destroy(&cond_available_oven);
   return 0;
 
 }
 
 void * order(void *order_id){
-  int
+  int rc;
   int id = *(int*)order_id;
   //struct timespec cook_start_time;
 
@@ -98,7 +104,7 @@ void * order(void *order_id){
 
   while (available_cooks<=0){
     printf("No cook/oven available. Order %d Blocked.\n", id);
-    pthread_cond_wait(&cond_no_available_cook, &mutex_available_cook);
+    pthread_cond_wait(&cond_available_cook, &mutex_available_cook);
   }
 
   printf("Order %d is executing\n", id);
@@ -113,18 +119,27 @@ void * order(void *order_id){
   rc = pthread_mutex_lock(&mutex_available_oven);
   while (available_ovens <= 0){
     printf("No cook/oven available. Order %d Blocked.\n", id);
-    pthread_cond_wait(&cond_no_available_oven, &mutex_available_oven);
+    pthread_cond_wait(&cond_available_oven, &mutex_available_oven);
   }
   available_ovens--;
   rc = pthread_mutex_unlock(&mutex_available_oven);
   sleep(t_bake);//sleep(t_bake);
 
+  rc = pthread_mutex_lock(&mutex_available_cook);
+  ++available_cooks;
+  pthread_cond_signal(&cond_available_cook);
+  rc = pthread_mutex_unlock(&mutex_available_cook);
+
+  rc = pthread_mutex_lock(&mutex_available_oven);
+  ++available_ovens;
+  pthread_cond_signal(&cond_available_oven);
+  rc = pthread_mutex_unlock(&mutex_available_oven);
+
+  rc = pthread_mutex_lock(&mutex_print);
+
   printf("Successfull execution of order %d\n", id);
-  n_cook++;
-  n_oven++;
-  seed =id;
-  pthread_cond_signal(&cond);
-  pthread_mutex_unlock(&lock);
+
+  rc = pthread_mutex_unlock(&mutex_print);
   //end timer here
 
   pthread_exit(NULL);
