@@ -18,7 +18,7 @@ unsigned int seed;
 int available_cooks ;
 int available_ovens ;
 double avg_time ;
-double max_time;
+double max_time = -1 ;
 
 
 //Mutexes
@@ -95,11 +95,11 @@ int main(int argc, char * argv[]){
 void * order(void *order_id){
   int rc;
   int id = *(int*)order_id;
-  //struct timespec cook_start_time;
+  struct timespec order_time_to_complete;
 
   printf("Hello from order: %d\n", id);
   //start timer here
-  //clock_gettime(CLOCK_REALTIME, &cook_start_time);
+  clock_gettime(CLOCK_REALTIME, &order_time_to_complete);
   rc = pthread_mutex_lock(&mutex_available_cook);
 
   while (available_cooks<=0){
@@ -137,33 +137,24 @@ void * order(void *order_id){
 
   rc = pthread_mutex_lock(&mutex_print);
 
-  printf("Successfull execution of order %d\n", id);
-
+  printf("Successfull execution of order %d in time %d ", id,order_time_to_complete.tv_sec/60);
   rc = pthread_mutex_unlock(&mutex_print);
+
+  rc = pthread_mutex_lock(&mutex_avg_time);
+  avg_time+=order_time_to_complete.tv_sec;
+  rc = pthread_mutex_unlock(&mutex_avg_time);
+
+  rc = pthread_mutex_lock(&mutex_max_time);
+  if (order_time_to_complete.tv_sec > max_time){
+  	max_time = order_time_to_complete.tv_sec;
+  }
+  rc = pthread_mutex_unlock(&mutex_max_time);
+
+
+  //int next_order_time = rand_r(&seed) % t_orderhigh + t_orderlow;
+  //sleep(next_order_time);
   //end timer here
 
   pthread_exit(NULL);
 
-
-
-  /*int rc;
-  printf("Hello from order: %d\n", id);
-  rc = pthread_mutex_lock(&lock);
-
-  while (cooks==0){
-    printf("H paraggelia %d den brike paraskevasth. Blocked...\n", id);
-    rc= pthread_cond_wait(&cond, &lock);
-  }
-
-  printf("H paraggelia %d eksipiretitai.\n", id);
-  cooks--;
-  rc = pthread_mutex_unlock(&lock);
-  sleep(5);
-  rc=pthread_mutex_lock(&lock);
-  printf("H paraggelia %d eksipiretithike epitixos! \n", id);
-  cooks++;
-  rc = pthread_cond_signal(&cond);
-  rc = pthread_mutex_unlock(&lock);
-  */
-    
 }
