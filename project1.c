@@ -68,6 +68,9 @@ int main(int argc, char * argv[]){
   pthread_t threads[n_cust];
   int id[n_cust];
   for (int i=0; i<n_cust; i++){
+    if(i>0){
+        sleep(rand_r(&seed) % t_orderhigh + t_orderlow);
+    }
     id[i] = i+1;
     printf("Main: (creating thread) incoming order with id: %d\n", i+1);
     pthread_create(&threads[i], NULL, &order, &id[i]);
@@ -80,6 +83,7 @@ int main(int argc, char * argv[]){
   for (int i=0; i<n_cust; i++){
     pthread_join(threads[i], NULL);
   }
+  printf("%f %f",max_time,avg_time/n_cust);
 
   pthread_mutex_destroy(&mutex_available_cook);
   pthread_mutex_destroy(&mutex_available_oven);
@@ -95,13 +99,13 @@ int main(int argc, char * argv[]){
 void * order(void *order_id){
   int rc;
   int id = *(int*)order_id;
-  struct timespec order_time_to_complete;
+  struct timespec begin;
+  struct timespec end;
 
   printf("Hello from order: %d\n", id);
   //start timer here
-  clock_gettime(CLOCK_REALTIME, &order_time_to_complete);
+  clock_gettime(CLOCK_REALTIME, &begin);
   rc = pthread_mutex_lock(&mutex_available_cook);
-
   while (available_cooks<=0){
     printf("No cook/oven available. Order %d Blocked.\n", id);
     pthread_cond_wait(&cond_available_cook, &mutex_available_cook);
@@ -134,25 +138,21 @@ void * order(void *order_id){
   ++available_ovens;
   pthread_cond_signal(&cond_available_oven);
   rc = pthread_mutex_unlock(&mutex_available_oven);
-
+  clock_gettime(CLOCK_REALTIME, &end);
   rc = pthread_mutex_lock(&mutex_print);
 
-  printf("Successfull execution of order %d in time %d ", id,order_time_to_complete.tv_sec/60);
+  printf("Successfull execution of order %d in time %d \n", id, (int)(end.tv_sec-begin.tv_sec));
   rc = pthread_mutex_unlock(&mutex_print);
 
   rc = pthread_mutex_lock(&mutex_avg_time);
-  avg_time+=order_time_to_complete.tv_sec;
+  avg_time+=end.tv_sec-begin.tv_sec;
   rc = pthread_mutex_unlock(&mutex_avg_time);
 
   rc = pthread_mutex_lock(&mutex_max_time);
-  if (order_time_to_complete.tv_sec > max_time){
-  	max_time = order_time_to_complete.tv_sec;
+  if (end.tv_sec-begin.tv_sec > max_time){
+  	max_time = end.tv_sec-begin.tv_sec;
   }
   rc = pthread_mutex_unlock(&mutex_max_time);
-
-
-  //int next_order_time = rand_r(&seed) % t_orderhigh + t_orderlow;
-  //sleep(next_order_time);
   //end timer here
 
   pthread_exit(NULL);
