@@ -33,7 +33,12 @@ pthread_mutex_t mutex_print = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond_available_cook = PTHREAD_COND_INITIALIZER;
 pthread_cond_t cond_available_oven = PTHREAD_COND_INITIALIZER;
 
-
+void checking_mutex_action(int rc){
+	if (rc != 0) {
+		printf("ERROR: return code is %d\n", rc);
+       	exit(-1);
+    }
+}
 
 int main(int argc, char * argv[]){
 
