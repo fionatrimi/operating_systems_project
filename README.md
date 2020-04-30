@@ -12,4 +12,4 @@
 # Run (2nd way)
 ```$ chmod +x test-re1.sh```
 
-```./test-res1.sh```
+```$ ./test-res1.sh```
