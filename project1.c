@@ -1,18 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <pthread.h>
-#include <unistd.h>
-
-void * order(void *x);
-int n_cook = 6; //num of cooks
-int n_oven = 5; //num of ovens
-int t_orderlow = 1; //mins
-int t_orderhigh = 5; //mins
-int n_orderlow = 1; //pizzas
-int n_orderhigh = 5; //pizzas
-int t_prep = 1;//min for pizza preperation
-int t_bake = 10; //mins for pizza baking
-unsigned int seed;
+#include <project1.h>
 
 //Variables
 int available_cooks ;
@@ -40,7 +26,7 @@ pthread_cond_t cond_available_oven = PTHREAD_COND_INITIALIZER;
 
 
 int main(int argc, char * argv[]){
-
+	int rc;
   /*
     * Checking if programm args are valid, 
       prints the needed messages, 
@@ -73,7 +59,8 @@ int main(int argc, char * argv[]){
     }
     id[i] = i+1;
     printf("Main: (creating thread) incoming order with id: %d\n", i+1);
-    pthread_create(&threads[i], NULL, &order, &id[i]);
+    rc=pthread_create(&threads[i], NULL, &order, &id[i]);
+    checking_mutex_action(rc);
   }
 
 
@@ -81,9 +68,10 @@ int main(int argc, char * argv[]){
     Waiting all threads to execute
   */
   for (int i=0; i<n_cust; i++){
-    pthread_join(threads[i], NULL);
+    rc = pthread_join(threads[i], NULL);
+    checking_mutex_action(rc);
   }
-  printf("%f %f",max_time,avg_time/n_cust);
+  printf("max time %f avg time %f",max_time,avg_time/n_cust);
 
   pthread_mutex_destroy(&mutex_available_cook);
   pthread_mutex_destroy(&mutex_available_oven);
@@ -106,6 +94,7 @@ void * order(void *order_id){
   //start timer here
   clock_gettime(CLOCK_REALTIME, &begin);
   rc = pthread_mutex_lock(&mutex_available_cook);
+  checking_mutex_action(rc);
   while (available_cooks<=0){
     printf("No cook/oven available. Order %d Blocked.\n", id);
     pthread_cond_wait(&cond_available_cook, &mutex_available_cook);
@@ -115,46 +104,65 @@ void * order(void *order_id){
   available_cooks--;
 
   rc = pthread_mutex_unlock(&mutex_available_cook);
+  checking_mutex_action(rc);
 
   int pizzas = rand_r(&seed) % n_orderhigh + n_orderlow;
   sleep(t_prep*pizzas);
 
 
   rc = pthread_mutex_lock(&mutex_available_oven);
+  checking_mutex_action(rc);
   while (available_ovens <= 0){
     printf("No cook/oven available. Order %d Blocked.\n", id);
     pthread_cond_wait(&cond_available_oven, &mutex_available_oven);
   }
   available_ovens--;
   rc = pthread_mutex_unlock(&mutex_available_oven);
+  checking_mutex_action(rc);
   sleep(t_bake);//sleep(t_bake);
 
   rc = pthread_mutex_lock(&mutex_available_cook);
+  checking_mutex_action(rc);
   ++available_cooks;
   pthread_cond_signal(&cond_available_cook);
   rc = pthread_mutex_unlock(&mutex_available_cook);
+  checking_mutex_action(rc);
 
   rc = pthread_mutex_lock(&mutex_available_oven);
+  checking_mutex_action(rc);
   ++available_ovens;
   pthread_cond_signal(&cond_available_oven);
   rc = pthread_mutex_unlock(&mutex_available_oven);
+  checking_mutex_action(rc);
   clock_gettime(CLOCK_REALTIME, &end);
   rc = pthread_mutex_lock(&mutex_print);
+  checking_mutex_action(rc);
 
-  printf("Successfull execution of order %d in time %d \n", id, (int)(end.tv_sec-begin.tv_sec));
+  printf("Successfull execution of order %d in time %d \n pizzas %d", id, (int)(end.tv_sec-begin.tv_sec),pizzas);
   rc = pthread_mutex_unlock(&mutex_print);
+  checking_mutex_action(rc);
 
   rc = pthread_mutex_lock(&mutex_avg_time);
+  checking_mutex_action(rc);
   avg_time+=end.tv_sec-begin.tv_sec;
   rc = pthread_mutex_unlock(&mutex_avg_time);
+  checking_mutex_action(rc);
 
   rc = pthread_mutex_lock(&mutex_max_time);
+  checking_mutex_action(rc);
   if (end.tv_sec-begin.tv_sec > max_time){
   	max_time = end.tv_sec-begin.tv_sec;
   }
   rc = pthread_mutex_unlock(&mutex_max_time);
+  checking_mutex_action(rc);
   //end timer here
 
   pthread_exit(NULL);
 
+}
+void checking_mutex_action(int rc){
+	if (rc != 0) {
+		printf("ERROR: return code is %d\n", rc);
+       	exit(-1);
+    }
 }
