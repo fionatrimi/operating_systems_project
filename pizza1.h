@@ -3,8 +3,8 @@
 #include <pthread.h>
 #include <unistd.h>
 
-void checking_mutex_action(int rc);
 void * order(void *x);
+void checking_mutex_action(int rc);
 const int n_cook = 6; //num of cooks
 const int n_oven = 5; //num of ovens
 const int t_orderlow = 1; //mins
