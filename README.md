@@ -1,5 +1,5 @@
 ## Download
-```$ git clone https://github.com/fionatrimi/os_testing```
+```$ git clone https://github.com/fionatrimi/operating_systems_project```
 
 ```$ cd os_testing```
 
