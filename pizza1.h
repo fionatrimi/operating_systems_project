@@ -3,6 +3,8 @@
 #include <pthread.h>
 #include <unistd.h>
 
+#ifndef PIZZA_H
+#define PIZZA_H
 //Declaring functions
 void * order(void *x);
 void checking_mutex_action(int rc);
@@ -32,3 +34,5 @@ extern pthread_mutex_t mutex_print;
 //Declaring conditions
 extern pthread_cond_t cond_available_cook;
 extern pthread_cond_t cond_available_oven;
+
+#endif
