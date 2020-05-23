@@ -16,10 +16,10 @@ const int t_prep = 1;
 const int t_bake = 10;
 const int t_low = 5;
 const int t_high = 15;
-double avg_time ;
+double avg_delivery_time ;
 double avg_cold_time;
 double max_cold_time = -1;
-double max_time = -1 ;
+double max_delivery_time = -1 ;
 unsigned int seed;
 int available_cooks;
 int available_ovens;
@@ -29,8 +29,8 @@ int available_deliverer;
 pthread_mutex_t mutex_available_cook = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_available_oven = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_available_deliverer = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_avg_time= PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_max_time = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_avg_delivery_time= PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_max_delivery_time = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_avg_cold_time= PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_max_cold_time = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_print = PTHREAD_MUTEX_INITIALIZER;
@@ -56,6 +56,9 @@ void * order(void *order_id){
   struct timespec order_time_begin;
   struct timespec order_time_end;
 
+  struct timespec cold_time_begin;
+  struct timespec cold_time_end;
+  
   struct timespec delivery_time_begin;
   struct timespec delivery_time_end;
 
@@ -99,7 +102,7 @@ void * order(void *order_id){
 
   sleep(t_bake); //Waiting for pizzas to bake
 
-  clock_gettime(CLOCK_REALTIME, &delivery_time_begin);
+  clock_gettime(CLOCK_REALTIME, &cold_time_begin);
 
   //ΠΕΡΙΜΕΝΕΙ ΓΙΑ ΔΙΑΘΕΣΙΜΟ ΔΙΑΝΟΜΕΑ
   rc = pthread_mutex_lock(&mutex_available_deliverer);
@@ -121,11 +124,14 @@ void * order(void *order_id){
   checking_mutex_action(rc);
 
   // ΧΡΟΝΟΣ ΠΑΡΑΔΟΣΗΣ
+  clock_gettime(CLOCK_REALTIME, &delivery_time_begin);
+
   int random_delivery_time = rand_r(&seed) % t_high + t_low;
   sleep(random_delivery_time);
 
-  clock_gettime(CLOCK_REALTIME, &delivery_time_end);
+  clock_gettime(CLOCK_REALTIME, &cold_time_end);
 
+  clock_gettime(CLOCK_REALTIME, &delivery_time_end);
   sleep(random_delivery_time);
   // ΑΠΕΛΕΥΘΕΡΩΝΩ ΤΟΥΣ ΔΙΑΝΟΜΕΙΣ
   rc = pthread_mutex_lock(&mutex_available_deliverer);
@@ -141,40 +147,42 @@ void * order(void *order_id){
   //Locking/Unlocking output
   rc = pthread_mutex_lock(&mutex_print);
   checking_mutex_action(rc);
-  printf("Order with ID %d was ready in %d minutes and it was cold for %d minutes.\n", id, (int)(order_time_end.tv_sec-order_time_begin.tv_sec),(int)(delivery_time_end.tv_sec-delivery_time_begin.tv_sec));
+  printf("Order with ID %d was ready in %d minutes and it was cold for %d minutes.\n", id, (int)(order_time_end.tv_sec-order_time_begin.tv_sec),(int)(cold_time_end.tv_sec-cold_time_begin.tv_sec));
   rc = pthread_mutex_unlock(&mutex_print);
   checking_mutex_action(rc);
 
-  //Locking/Unlocking the variable to update the total time
-  rc = pthread_mutex_lock(&mutex_avg_time);
-  checking_mutex_action(rc);
-  avg_time+=order_time_end.tv_sec-order_time_begin.tv_sec;
-  rc = pthread_mutex_unlock(&mutex_avg_time);
-  checking_mutex_action(rc);
   //YPOLOGISMOS MESHS TIMHS KRYWMATOS
   rc = pthread_mutex_lock(&mutex_avg_cold_time);
   checking_mutex_action(rc);
-  avg_cold_time += delivery_time_end.tv_sec - delivery_time_begin.tv_sec;
+  avg_cold_time += cold_time_end.tv_sec - cold_time_begin.tv_sec;
   rc = pthread_mutex_unlock(&mutex_avg_cold_time);
   checking_mutex_action(rc);
 
   //YPOLOGISMOS MAX TIMHS KRYWMATOS
   rc = pthread_mutex_lock(&mutex_max_cold_time);
   checking_mutex_action(rc);
-  if (delivery_time_end.tv_sec - delivery_time_begin.tv_sec > max_time){
-        max_cold_time = delivery_time_end.tv_sec - delivery_time_begin.tv_sec;
+  if (cold_time_end.tv_sec - cold_time_begin.tv_sec > max_time){
+        max_cold_time = cold_time_end.tv_sec - cold_time_begin.tv_sec;
   }
   rc = pthread_mutex_unlock(&mutex_max_cold_time);
   checking_mutex_action(rc);
 
-  //Locking/Unlocking the variable to update the maximum time
-  rc = pthread_mutex_lock(&mutex_max_time);
+  //YPOLOGISMOS MESHS TIMHS PARADOSHS
+  rc = pthread_mutex_lock(&mutex_avg_delivery_time);
   checking_mutex_action(rc);
-  if (order_time_end.tv_sec - order_time_begin.tv_sec > max_time){
-        max_time = order_time_end.tv_sec - order_time_begin.tv_sec;
+  avg_delivery_time += delivery_time_end.tv_sec - delivery_time_begin.tv_sec;
+  rc = pthread_mutex_unlock(&mutex_avg_delivery_time);
+  checking_mutex_action(rc);
+
+  //YPOLOGISMOS MAX TIMHS PARADOSHS
+  rc = pthread_mutex_lock(&mutex_max_delivery_time);
+  checking_mutex_action(rc);
+  if (delivery_time_end.tv_sec - delivery_time_begin.tv_sec > max_delivery_time){
+        max_delivery_time = delivery_time_end.tv_sec - delivery_time_begin.tv_sec;
   }
-  rc = pthread_mutex_unlock(&mutex_max_time);
+  rc = pthread_mutex_unlock(&mutex_max_delivery_time);
   checking_mutex_action(rc);
+
 
   pthread_exit(NULL);
   return 0;
@@ -221,7 +229,8 @@ int main(int argc, char * argv[]){
   }
 
   //Printing final output
-  printf("\nMax order time: %f minutes.\nAverage time: %f minutes.\n",max_time,avg_time/n_cust);
+  printf("\nMax delivery time: %f minutes.\nAverage delivery time: %f minutes.\n",max_delivery_time,avg_delivery_time/n_cust);
+  printf("\nMax cold time: %f minutes.\nAverage cold time: %f minutes.\n",max_cold_time,avg_cold_time/n_cust);
 
   //Destroying pthreads' mutexes and conditions
   pthread_mutex_destroy(&mutex_available_cook);
@@ -231,6 +240,6 @@ int main(int argc, char * argv[]){
   pthread_mutex_destroy(&mutex_print);
   pthread_cond_destroy(&cond_available_cook);
   pthread_cond_destroy(&cond_available_oven);
-
+        
   return 0;
 }
