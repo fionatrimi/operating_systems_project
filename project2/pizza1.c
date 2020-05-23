@@ -161,7 +161,7 @@ void * order(void *order_id){
   //YPOLOGISMOS MAX TIMHS KRYWMATOS
   rc = pthread_mutex_lock(&mutex_max_cold_time);
   checking_mutex_action(rc);
-  if (cold_time_end.tv_sec - cold_time_begin.tv_sec > max_time){
+  if (cold_time_end.tv_sec - cold_time_begin.tv_sec > max_cold_time){
         max_cold_time = cold_time_end.tv_sec - cold_time_begin.tv_sec;
   }
   rc = pthread_mutex_unlock(&mutex_max_cold_time);
