@@ -233,13 +233,15 @@ int main(int argc, char * argv[]){
   printf("\nMax cold time: %f minutes.\nAverage cold time: %f minutes.\n",max_cold_time,avg_cold_time/n_cust);
 
   //Destroying pthreads' mutexes and conditions
+  pthread_mutex_destroy(&mutex_available_deliverer);
   pthread_mutex_destroy(&mutex_available_cook);
   pthread_mutex_destroy(&mutex_available_oven);
-  pthread_mutex_destroy(&mutex_max_time);
-  pthread_mutex_destroy(&mutex_avg_time);
-  pthread_mutex_destroy(&mutex_print);
+  pthread_mutex_destroy(&mutex_max_delivery_time);
+  pthread_mutex_destroy(&mutex_avg_delivery_time);
+  pthread_mutex_destroy(&mutex_max_cold_time);
+  pthread_mutex_destroy(&mutex_avg_cold_time);
   pthread_cond_destroy(&cond_available_cook);
   pthread_cond_destroy(&cond_available_oven);
-        
+  pthread_cond_destroy(&cond_available_deliverer);      
   return 0;
 }
