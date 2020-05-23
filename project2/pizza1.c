@@ -120,13 +120,13 @@ void * order(void *order_id){
   rc = pthread_mutex_unlock(&mutex_available_oven); //Oven unlocked
   checking_mutex_action(rc);
 
-  // ΧΡΟΝΟΣ ΠΑΡΑΔΟΣΗΣ 
+  // ΧΡΟΝΟΣ ΠΑΡΑΔΟΣΗΣ
   int random_delivery_time = rand_r(&seed) % t_high + t_low;
-  sleep(delivery_time);
+  sleep(random_delivery_time);
 
   clock_gettime(CLOCK_REALTIME, &delivery_time_end);
 
-  sleep(delivery_time);
+  sleep(random_delivery_time);
   // ΑΠΕΛΕΥΘΕΡΩΝΩ ΤΟΥΣ ΔΙΑΝΟΜΕΙΣ
   rc = pthread_mutex_lock(&mutex_available_deliverer);
   checking_mutex_action(rc);
@@ -141,7 +141,7 @@ void * order(void *order_id){
   //Locking/Unlocking output
   rc = pthread_mutex_lock(&mutex_print);
   checking_mutex_action(rc);
-  printf("Order with ID %d was ready in %d minutes and it was cold for %d minutes.\n", id, (int)(order_time_end.tv_sec-order_time_begin.tv_sec),(int)(delivery_time_end.tv_sec-deliver_time_begin.tv_sec));
+  printf("Order with ID %d was ready in %d minutes and it was cold for %d minutes.\n", id, (int)(order_time_end.tv_sec-order_time_begin.tv_sec),(int)(delivery_time_end.tv_sec-delivery_time_begin.tv_sec));
   rc = pthread_mutex_unlock(&mutex_print);
   checking_mutex_action(rc);
 
@@ -154,15 +154,15 @@ void * order(void *order_id){
   //YPOLOGISMOS MESHS TIMHS KRYWMATOS
   rc = pthread_mutex_lock(&mutex_avg_cold_time);
   checking_mutex_action(rc);
-  avg_cold_time += delivery_time_end.tv_sec - deliver_time_begin.tv_sec;
+  avg_cold_time += delivery_time_end.tv_sec - delivery_time_begin.tv_sec;
   rc = pthread_mutex_unlock(&mutex_avg_cold_time);
   checking_mutex_action(rc);
 
   //YPOLOGISMOS MAX TIMHS KRYWMATOS
   rc = pthread_mutex_lock(&mutex_max_cold_time);
   checking_mutex_action(rc);
-  if (delivery_time_end.tv_sec - deliver_time_begin.tv_sec > max_time){
-        max_cold_time = delivery_time_end.tv_sec - deliver_time_begin.tv_sec;
+  if (delivery_time_end.tv_sec - delivery_time_begin.tv_sec > max_time){
+        max_cold_time = delivery_time_end.tv_sec - delivery_time_begin.tv_sec;
   }
   rc = pthread_mutex_unlock(&mutex_max_cold_time);
   checking_mutex_action(rc);
@@ -231,6 +231,6 @@ int main(int argc, char * argv[]){
   pthread_mutex_destroy(&mutex_print);
   pthread_cond_destroy(&cond_available_cook);
   pthread_cond_destroy(&cond_available_oven);
-        
+
   return 0;
 }
