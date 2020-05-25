@@ -1,8 +1,6 @@
 ## Download
 ```$ git clone https://github.com/fionatrimi/operating_systems_project```
 
-```$ cd os_testing```
-
 ## Run (1st way)
 
 ```$ gcc -Wall pizza1.c -pthread```
