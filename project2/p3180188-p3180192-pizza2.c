@@ -2,43 +2,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
-#include "pizza1.h"
-
-//Initializing variables
-const int n_cook = 2;
-const int n_oven = 5;
-const int n_deliverer = 10;
-const int t_orderlow = 1;
-const int t_orderhigh = 5;
-const int n_orderlow = 1;
-const int n_orderhigh = 5;
-const int t_prep = 1;
-const int t_bake = 10;
-const int t_low = 5;
-const int t_high = 15;
-double avg_delivery_time ;
-double avg_cold_time;
-double max_cold_time = -1;
-double max_delivery_time = -1 ;
-unsigned int seed;
-int available_cooks;
-int available_ovens;
-int available_deliverer;
-
-//Initializing mutexes
-pthread_mutex_t mutex_available_cook = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_available_oven = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_available_deliverer = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_avg_delivery_time= PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_max_delivery_time = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_avg_cold_time= PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_max_cold_time = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_print = PTHREAD_MUTEX_INITIALIZER;
-
-//Initializing conditions
-pthread_cond_t cond_available_cook = PTHREAD_COND_INITIALIZER;
-pthread_cond_t cond_available_oven = PTHREAD_COND_INITIALIZER;
-pthread_cond_t cond_available_deliverer = PTHREAD_COND_INITIALIZER;
+#include "p3180188-p3180192-pizza2.h"
 
 void checking_mutex_action(int rc){
         //In case a mutex fails the program exits
@@ -52,7 +16,7 @@ void * order(void *order_id){
   int rc;
   int id = *(int*)order_id;
 
-  //Staring timer here
+  //Staring timers here
   struct timespec order_time_begin;
   struct timespec order_time_end;
 
@@ -104,15 +68,15 @@ void * order(void *order_id){
 
   clock_gettime(CLOCK_REALTIME, &cold_time_begin);
 
-  //ΠΕΡΙΜΕΝΕΙ ΓΙΑ ΔΙΑΘΕΣΙΜΟ ΔΙΑΝΟΜΕΑ
+  //Locking & Waiting for available delivery guy
   rc = pthread_mutex_lock(&mutex_available_deliverer);
   checking_mutex_action(rc);
   while (available_deliverer<=0){
     pthread_cond_wait(&cond_available_deliverer, &mutex_available_deliverer);
   }
 
-  available_deliverer--; //Decreasing available cooks by 1
-  rc = pthread_mutex_unlock(&mutex_available_deliverer);  //Cook unlocked
+  available_deliverer--; //Decreasing available delivery guys by 1
+  rc = pthread_mutex_unlock(&mutex_available_deliverer);  //Deliverer unlocked
   checking_mutex_action(rc);
 
   //Locking oven to be available again
@@ -123,25 +87,30 @@ void * order(void *order_id){
   rc = pthread_mutex_unlock(&mutex_available_oven); //Oven unlocked
   checking_mutex_action(rc);
 
-  // ΧΡΟΝΟΣ ΠΑΡΑΔΟΣΗΣ
+  //Time to deliver
   clock_gettime(CLOCK_REALTIME, &delivery_time_begin);
 
   int random_delivery_time = rand_r(&seed) % t_high + t_low;
   sleep(random_delivery_time);
 
+  //Ending 'cold' time
   clock_gettime(CLOCK_REALTIME, &cold_time_end);
 
+  //Ending delivery time of order
   clock_gettime(CLOCK_REALTIME, &delivery_time_end);
+
+  //Waiting delivery guy
   sleep(random_delivery_time);
-  // ΑΠΕΛΕΥΘΕΡΩΝΩ ΤΟΥΣ ΔΙΑΝΟΜΕΙΣ
+
+  //Free the delivery guys (Locking & Unlocking their availability mutexes)
   rc = pthread_mutex_lock(&mutex_available_deliverer);
   checking_mutex_action(rc);
-  ++available_deliverer; // Increase ovens by 1
+  ++available_deliverer; // Increase deliverer by 1
   pthread_cond_signal(&cond_available_deliverer);
-  rc = pthread_mutex_unlock(&mutex_available_deliverer); //Oven unlocked
+  rc = pthread_mutex_unlock(&mutex_available_deliverer); //Deliverer unlocked
   checking_mutex_action(rc);
 
-  // Ending timer for this order
+  //Ending timer for this order
   clock_gettime(CLOCK_REALTIME, &order_time_end);
 
   //Locking/Unlocking output
@@ -151,14 +120,16 @@ void * order(void *order_id){
   rc = pthread_mutex_unlock(&mutex_print);
   checking_mutex_action(rc);
 
-  //YPOLOGISMOS MESHS TIMHS KRYWMATOS
+  //Calculating average time of 'cold' 
+  //(Locking & Unlocking average cold time mutex)
   rc = pthread_mutex_lock(&mutex_avg_cold_time);
   checking_mutex_action(rc);
   avg_cold_time += cold_time_end.tv_sec - cold_time_begin.tv_sec;
   rc = pthread_mutex_unlock(&mutex_avg_cold_time);
   checking_mutex_action(rc);
 
-  //YPOLOGISMOS MAX TIMHS KRYWMATOS
+  //Calculating maximum time of 'cold' 
+  //(Locking & Unlocking maximum cold time mutex)
   rc = pthread_mutex_lock(&mutex_max_cold_time);
   checking_mutex_action(rc);
   if (cold_time_end.tv_sec - cold_time_begin.tv_sec > max_cold_time){
@@ -167,14 +138,16 @@ void * order(void *order_id){
   rc = pthread_mutex_unlock(&mutex_max_cold_time);
   checking_mutex_action(rc);
 
-  //YPOLOGISMOS MESHS TIMHS PARADOSHS
+  //Calculating average time of delivery 
+  //(Locking & Unlocking average delivery time mutex)
   rc = pthread_mutex_lock(&mutex_avg_delivery_time);
   checking_mutex_action(rc);
   avg_delivery_time += delivery_time_end.tv_sec - delivery_time_begin.tv_sec;
   rc = pthread_mutex_unlock(&mutex_avg_delivery_time);
   checking_mutex_action(rc);
 
-  //YPOLOGISMOS MAX TIMHS PARADOSHS
+  //Calculating maximum time of delivery 
+  //(Locking & Unlocking maximum delivery time mutex)
   rc = pthread_mutex_lock(&mutex_max_delivery_time);
   checking_mutex_action(rc);
   if (delivery_time_end.tv_sec - delivery_time_begin.tv_sec > max_delivery_time){
@@ -208,7 +181,6 @@ int main(int argc, char * argv[]){
   printf("Number of customers: %d\nSeed: %d\n\n",n_cust, seed);
   available_cooks = n_cook;
   available_ovens = n_oven;
-  available_deliverer = n_deliverer;
 
   //Creting n_cust pthreads giving each one of them an id
   //Every order given by customers is a thread
